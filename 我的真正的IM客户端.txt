@@ -1,0 +1,97 @@
+package 我的真正的IM客户端;
+import java.awt.*;
+import java.net.*;
+import java.io.*;
+import java.awt.event.*;
+public class MZZK extends Frame implements Runnable
+{
+	private TextField nameBox=new TextField("<名字>");         //显示用户名
+	private TextArea msgView=new TextArea();
+	private TextField sendBox=new TextField();                 //消息发送的内容显示
+	private BufferedReader reader;
+	private PrintWriter writer;
+	private Socket socket;
+	public MZZK(String title)
+	{
+		super(title);
+		msgView.setEditable(false);
+		
+		//添加组件
+		add(nameBox,"North");
+		add(msgView,"Center");
+		add(sendBox,"South");
+		
+		//关闭方式
+				this.addWindowListener(new WindowAdapter()
+						{
+					@Override
+					public void windowClosing(WindowEvent e)
+					{
+						System.exit(0);
+					}
+						});
+				
+		
+		
+		//添加动作事件监听器
+		sendBox.addActionListener(new ActionListener()
+		{
+			public void actionPerformed(ActionEvent ae)
+			{
+				try
+				{
+					//发送用户名及消息内容
+					writer.println(nameBox.getText()+":"+sendBox.getText());
+					
+					sendBox.setText("");     //清除sendBox内容
+					
+				}
+				catch(Exception ie){}
+			}
+		});
+		pack();
+	}
+	
+	public void run()
+	{
+		while(true)
+		{
+			try
+			{
+				//从输入流读取数据，然后添加到msgView中
+				msgView.append(reader.readLine()+"\n");
+			}
+			catch(IOException ie){}
+		}
+	}
+	
+	
+	private void connect()
+	{
+		
+		try
+		{
+			msgView.append("尝试与服务器套接字连接\n");
+			socket=new Socket("127.0.0.1",7777);
+			msgView.append("聊天准备完毕");
+			
+			reader=new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			writer=new PrintWriter(socket.getOutputStream(),true);
+			new Thread(this).start();
+		}
+		catch(Exception e)
+		{
+			msgView.append("连接失败");
+		}
+	}
+
+	public static void main(String[] args) 
+	{
+		MZZK client=new MZZK("聊天");
+		client.setVisible(true);
+		client.connect();
+				
+
+	}
+
+}

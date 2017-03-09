@@ -1,0 +1,185 @@
+package 我的真正的IM服务器;
+import java.net.*;
+import java.sql.*;
+import java.io.*;
+import java.util.*;
+public class MZZF 
+{ 
+	private ServerSocket server;
+	private BManager bMan=new BManager();   //消息广播者
+	private dl dd=new dl();
+	public MZZF(){}
+	void startServer()
+	{
+		try
+		{
+			server=new ServerSocket(7777);
+			System.out.println("服务器套接字已经被创建");
+			while(true)
+			{
+				Socket socket=server.accept();
+				System.out.println("已经与客户机连接");
+				
+				//创建与客户机进行通信的线程 并启动它
+				new Chat_Thread(socket).start();
+				
+				//向消息广播者列表添加套接字
+				bMan.add(socket);
+				
+				//对当前客户机连接数进行输出
+				bMan.sendClientInfo();
+				
+			}
+		}
+		catch(Exception e)
+		{
+			System.out.println(e);
+			
+		}
+	}
+	
+
+	public static void main(String[] args) 
+	{
+		MZZF server=new MZZF();
+		server.dd.sjk();
+		server.startServer();                            //运行服务器
+		
+	}
+	//与客户机进行通讯的线程类
+	class Chat_Thread extends Thread
+	{
+		Socket socket;                                  //套接字引用变量
+		private BufferedReader reader;                 //套接字输入流
+		private PrintWriter writer;                    //套接字输出流
+		Chat_Thread(Socket socket)
+		{
+			this.socket=socket;
+		}
+		public void run()
+		{
+			try
+			{
+				//获取套接字输入输出流
+				reader=new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				writer=new PrintWriter(socket.getOutputStream(),true);
+				String msg;
+				//从输入流获取信息
+				while((msg=reader.readLine())!=null)     
+				{
+					System.out.println(msg);
+					//向客户机传送消息
+					bMan.sendToAll(msg);	
+				}
+			}
+			catch(Exception e){}
+			finally
+			{
+				//与客户机断开后进行的处理
+				try
+				{
+					bMan.remove(socket);        //从套接字管理器列表中删除套接字
+					
+					//关闭输入输出流及套接字
+					if(reader!=null)
+						reader.close();
+					if(writer!=null)
+						writer.close();
+					if(socket!=null)
+						socket.close();
+					reader=null;
+					writer=null;
+					socket=null;
+					
+					//向屏幕输出相关信息
+					System.out.println("客户机离开");
+					bMan.sendClientInfo();	
+				}
+				catch(Exception e){}
+			}
+		}
+	}
+	
+	
+	
+	//消息广播者类
+	class BManager extends Vector
+	{
+		BManager(){}
+		void add(Socket sock)
+		{
+			super.add(sock);
+		}
+		void remove(Socket sock)
+		{
+			super.remove(sock);
+		}
+		
+		
+		
+		//向所有客户端传送msg 同步化方法
+		synchronized void sendToAll(String msg)
+		{
+			PrintWriter writer=null;
+			Socket sock;
+			
+			for(int i=0;i<size();i++)
+			{
+				sock=(Socket)elementAt(i);    //获取第i个套接字
+				try
+				{
+					writer=new PrintWriter(sock.getOutputStream(),true);
+				}
+				catch(IOException ie){}
+				if(writer!=null)
+					writer.println(msg);
+			}
+		}
+		
+		
+		//向所有客户机发送当前人数
+		synchronized void sendClientInfo()
+		{
+			String info="当前聊天人数："+size();
+			System.out.println(info);
+			sendToAll(info);
+		}
+	}	
+	
+	class dl
+	{
+		
+		 void sjk()
+		 {
+			//连接数据库
+			try {
+			      Class.forName("com.mysql.jdbc.Driver");     //加载MYSQL JDBC驱动程序   
+			     System.out.println("Success loading Mysql Driver!");
+			    }
+			    catch (Exception e) {
+			      System.out.print("Error loading Mysql Driver!");
+			      e.printStackTrace();
+			    }
+			    try {
+			      Connection connect = DriverManager.getConnection(
+			          "jdbc:mysql://localhost:3306/IM","root","xys5084695");
+			           //连接URL为   jdbc:mysql//服务器地址/数据库名  ，后面的2个参数分别是登陆用户名和密码
+			      
+			      System.out.println("Success connect Mysql server!");
+			      Statement stmt = connect.createStatement();
+			      ResultSet rs = stmt.executeQuery("select * from itable");
+			                                                              //user 为你表的名称
+			while (rs.next()) {
+			        System.out.println(rs.getString("id")+" "+rs.getString("mm"));
+			      }
+			    }
+			    catch (Exception e) 
+			    {
+			      System.out.print("get data error!");
+			      e.printStackTrace();
+			      
+			  
+			    }
+		}
+	}
+}
